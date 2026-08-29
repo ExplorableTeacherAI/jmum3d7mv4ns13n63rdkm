@@ -35,6 +35,8 @@ import {
     Halo,
     HandleShadow,
     INK,
+    INK_STRUCTURE,
+    SUCCESS,
     makeGrid,
     svgPointFromEvent,
     useHighlight,
@@ -48,8 +50,34 @@ const CENTRE_LIMIT = 3;
 const MIN_RADIUS = 1;
 const MAX_RADIUS = 5;
 
+const DEFAULT_TEST: [number, number] = [6, 3];
+
 const GRID = makeGrid({ xMin: -8, xMax: 8, yMin: -8, yMax: 8 });
 const SHADOW_ID = "circle-handle-shadow";
+
+/** Brackets a negative number so (-3)^2 never reads as -3^2. */
+const squareTerm = (value: number) => (value < 0 ? `(${value})²` : `${value}²`);
+
+/** Substitute the test point into the left-hand side and compare with r². */
+function testVerdict(
+    testX: number,
+    testY: number,
+    centreX: number,
+    centreY: number,
+    radius: number,
+) {
+    const dx = testX - centreX;
+    const dy = testY - centreY;
+    const leftSide = dx * dx + dy * dy;
+    const rightSide = radius * radius;
+    if (leftSide === rightSide) {
+        return { leftSide, rightSide, comparison: "exactly", verdict: "on", color: SUCCESS };
+    }
+    if (leftSide < rightSide) {
+        return { leftSide, rightSide, comparison: "less than", verdict: "inside", color: ACCENT };
+    }
+    return { leftSide, rightSide, comparison: "more than", verdict: "outside", color: INK_STRUCTURE };
+}
 
 /** Plain-text bracket, e.g. (x − 1) or (y + 2), with the sign flipped. */
 const bracketText = (letter: string, value: number) =>
@@ -66,6 +94,8 @@ function CircleDrawing() {
     const centreX = useVar<number>("circleCentreX", DEFAULT_CENTRE[0]);
     const centreY = useVar<number>("circleCentreY", DEFAULT_CENTRE[1]);
     const radius = useVar<number>("circleRadius", DEFAULT_RADIUS);
+    const testX = useVar<number>("circleTestX", DEFAULT_TEST[0]);
+    const testY = useVar<number>("circleTestY", DEFAULT_TEST[1]);
     const { opacity, weight, isActive, hoverProps } = useHighlight("circleHighlight");
 
     // Where the rim handle sits on the circle is a view detail, not a lesson
@@ -73,8 +103,10 @@ function CircleDrawing() {
     const [rimAngle, setRimAngle] = useState(-0.5);
     const [draggingCentre, setDraggingCentre] = useState(false);
     const [draggingRim, setDraggingRim] = useState(false);
+    const [draggingTest, setDraggingTest] = useState(false);
     const draggingCentreRef = useRef(false);
     const draggingRimRef = useRef(false);
+    const draggingTestRef = useRef(false);
     const svgRef = useRef<SVGSVGElement>(null);
 
     const moveCentre = (event: React.PointerEvent<SVGCircleElement>) => {
@@ -94,8 +126,19 @@ function CircleDrawing() {
         setVar("circleRadius", clamp(Math.round(Math.hypot(dx, dy)), MIN_RADIUS, MAX_RADIUS));
     };
 
+    const moveTest = (event: React.PointerEvent<SVGCircleElement>) => {
+        if (!draggingTestRef.current) return;
+        const point = svgPointFromEvent(event, svgRef.current, GRID.width, GRID.height);
+        setVar("circleTestX", clamp(Math.round(GRID.fromX(point.x)), GRID.xMin, GRID.xMax));
+        setVar("circleTestY", clamp(Math.round(GRID.fromY(point.y)), GRID.yMin, GRID.yMax));
+    };
+
+    const test = testVerdict(testX, testY, centreX, centreY, radius);
+
     const cx = GRID.toX(centreX);
     const cy = GRID.toY(centreY);
+    const tx = GRID.toX(testX);
+    const ty = GRID.toY(testY);
     const rimX = GRID.toX(centreX + radius * Math.cos(rimAngle));
     const rimY = GRID.toY(centreY + radius * Math.sin(rimAngle));
 
@@ -215,7 +258,69 @@ function CircleDrawing() {
                     setDraggingRim(value);
                 }}
             />
+
+            {/* The test point — slate, so it never competes with the accent,
+                and green only when it lands exactly on the rim. */}
+            <g {...hoverProps("test")} opacity={opacity("test")} style={EASE_150}>
+                <line
+                    x1={cx}
+                    y1={cy}
+                    x2={tx}
+                    y2={ty}
+                    stroke={test.color}
+                    strokeWidth={weight("test", 1.5)}
+                    strokeDasharray="3 5"
+                    strokeLinecap="round"
+                    opacity={0.8}
+                />
+                <text
+                    x={tx}
+                    y={testY <= -7 ? ty + 26 : ty - 18}
+                    fill={INK}
+                    fontSize="12"
+                    textAnchor={testX >= 7 ? "end" : testX <= -7 ? "start" : "middle"}
+                    style={{ fontVariantNumeric: "tabular-nums" }}
+                >
+                    {`test (${testX}, ${testY})`}
+                </text>
+                <DragHandle
+                    x={tx}
+                    y={ty}
+                    color={test.color}
+                    radius={7}
+                    shadowId={SHADOW_ID}
+                    dragging={draggingTest}
+                    onDragMove={moveTest}
+                    onDraggingChange={(value) => {
+                        draggingTestRef.current = value;
+                        setDraggingTest(value);
+                    }}
+                />
+            </g>
         </svg>
+    );
+}
+
+/** Live substitution of the test point into the equation, in words. */
+function TestPointVerdict() {
+    const centreX = useVar<number>("circleCentreX", DEFAULT_CENTRE[0]);
+    const centreY = useVar<number>("circleCentreY", DEFAULT_CENTRE[1]);
+    const radius = useVar<number>("circleRadius", DEFAULT_RADIUS);
+    const testX = useVar<number>("circleTestX", DEFAULT_TEST[0]);
+    const testY = useVar<number>("circleTestY", DEFAULT_TEST[1]);
+    const test = testVerdict(testX, testY, centreX, centreY, radius);
+
+    return (
+        <div
+            className="px-6 pb-4 text-[13px] leading-relaxed text-[#334155]"
+            style={{ fontVariantNumeric: "tabular-nums" }}
+        >
+            {`Test point (${testX}, ${testY}): ${squareTerm(testX - centreX)} + ${squareTerm(
+                testY - centreY,
+            )} = ${test.leftSide}, which is ${test.comparison} r² = ${test.rightSide}, so it lies `}
+            <span style={{ color: test.color, fontWeight: 600 }}>{test.verdict}</span>
+            {" the circle."}
+        </div>
     );
 }
 
@@ -228,18 +333,21 @@ function CircleFigure() {
                 setVar("circleCentreX", DEFAULT_CENTRE[0]);
                 setVar("circleCentreY", DEFAULT_CENTRE[1]);
                 setVar("circleRadius", DEFAULT_RADIUS);
+                setVar("circleTestX", DEFAULT_TEST[0]);
+                setVar("circleTestY", DEFAULT_TEST[1]);
                 setVar("circleHighlight", "");
             }}
-            caption="The teal handle on the rim stretches the radius; the indigo dot carries the whole circle to a new centre. The equation in the corner is rebuilt from scratch every time you move either one."
+            caption="The teal handle on the rim stretches the radius and the indigo dot carries the whole circle to a new centre. The slate test point can be dropped anywhere, and the line underneath checks it against the equation."
         >
             <CircleDrawing />
+            <TestPointVerdict />
             <InteractionHintSequence
                 hintKey="circle-rim-drag"
                 steps={[
                     {
                         gesture: "drag",
                         label: "Drag the teal rim handle to stretch the circle",
-                        position: { x: "66%", y: "73%" },
+                        position: { x: "66%", y: "67%" },
                         dragPath: {
                             type: "line",
                             startOffset: { x: -20, y: -12 },
@@ -249,11 +357,21 @@ function CircleFigure() {
                     {
                         gesture: "drag",
                         label: "Now drag the indigo centre and watch the brackets change",
-                        position: { x: "54%", y: "64%" },
+                        position: { x: "54%", y: "59%" },
                         dragPath: {
                             type: "line",
                             startOffset: { x: -18, y: 14 },
                             endOffset: { x: 20, y: -16 },
+                        },
+                    },
+                    {
+                        gesture: "drag",
+                        label: "Drop the slate test point on the rim and read the verdict",
+                        position: { x: "71%", y: "37%" },
+                        dragPath: {
+                            type: "line",
+                            startOffset: { x: 16, y: -14 },
+                            endOffset: { x: -20, y: 16 },
                         },
                     },
                 ]}
@@ -305,7 +423,8 @@ export const circlesBlocks: ReactElement[] = [
                     distance
                 </InlineLinkedHighlight>{" "}
                 wider, then drag the indigo centre to carry the whole circle somewhere
-                else. The equation rewrites itself as you move.
+                else. The equation rewrites itself as you move, and the slate test point
+                lets you try any spot on the grid against it.
             </EditableParagraph>
         </Block>
     </StackLayout>,
@@ -378,7 +497,7 @@ export const circlesBlocks: ReactElement[] = [
                             {
                                 gesture: "drag-vertical",
                                 label: "Drag the indigo centre down to y = −3 and watch the y bracket",
-                                position: { x: "54%", y: "64%" },
+                                position: { x: "54%", y: "59%" },
                                 completionVar: "circleCentreY",
                                 completionValue: -3,
                                 completionTolerance: 0.4,
@@ -386,7 +505,7 @@ export const circlesBlocks: ReactElement[] = [
                             {
                                 gesture: "drag-horizontal",
                                 label: "Now slide it right to x = 2 — the equation should match the question",
-                                position: { x: "54%", y: "64%" },
+                                position: { x: "54%", y: "59%" },
                                 completionVar: "circleCentreX",
                                 completionValue: 2,
                                 completionTolerance: 0.4,
