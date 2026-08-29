@@ -1,10 +1,11 @@
 /**
  * Section 4 — Straight Lines
  *
- * Constructive figure: the student builds the line by dragging the two points
- * it passes through. The staircase between them (run, then rise) is drawn from
- * the model, so the gradient is read off the grid rather than recited, and the
- * y-intercept marker shows where c comes from.
+ * Constructive figure with two ways in: the student can drag the two points
+ * the line passes through, or drive m and c straight from the sliders under
+ * the grid. Both write the SAME two store variables (lineGradient,
+ * lineIntercept), so the staircase, the equation and the sliders can never
+ * disagree — the points simply ride the line at their own x anchors.
  */
 
 import React, { useRef, useState, type ReactElement } from "react";
@@ -18,13 +19,14 @@ import {
     InlineLinkedHighlight,
     InteractionHintSequence,
 } from "@/components/atoms";
-import { Figure, FormulaBlock } from "@/components/molecules";
+import { Figure, FigureSlider, FormulaBlock } from "@/components/molecules";
 import { useVar, useSetVar } from "@/stores";
 import { clamp } from "@/lib/motion";
 import {
     getVariableInfo,
     clozePropsFromDefinition,
     linkedHighlightPropsFromDefinition,
+    numberPropsFromDefinition,
 } from "../variables";
 import {
     ACCENT,
@@ -43,14 +45,32 @@ import {
 
 // ── Model ────────────────────────────────────────────────────────────────────
 
-const DEFAULT_FIRST: [number, number] = [-2, -3];
-const DEFAULT_SECOND: [number, number] = [2, 5];
+const DEFAULT_GRADIENT = 2;
+const DEFAULT_INTERCEPT = 1;
+const DEFAULT_FIRST_X = -2;
+const DEFAULT_SECOND_X = 2;
+const LIMIT = 6; // both m and c live in [-6, 6]
 
 const GRID = makeGrid({ xMin: -6, xMax: 6, yMin: -6, yMax: 6 });
 const SHADOW_ID = "line-handle-shadow";
 
-const tidy = (value: number) =>
-    Number.isInteger(value) ? `${value}` : value.toFixed(2);
+const round6 = (value: number) => Math.round(value * 1e6) / 1e6;
+
+const tidy = (value: number) => {
+    const rounded = round6(value);
+    return Number.isInteger(rounded) ? `${rounded}` : rounded.toFixed(2);
+};
+
+/** The x values for which the line still has a y on the visible grid. */
+function visibleXWindow(gradient: number, intercept: number): [number, number] {
+    if (gradient === 0) return [GRID.xMin, GRID.xMax];
+    const a = (GRID.yMin - intercept) / gradient;
+    const b = (GRID.yMax - intercept) / gradient;
+    return [
+        Math.max(GRID.xMin, Math.min(a, b)),
+        Math.min(GRID.xMax, Math.max(a, b)),
+    ];
+}
 
 /** Clip y = mx + c to the visible grid rectangle. */
 function clipLine(gradient: number, intercept: number): [number, number][] {
@@ -72,10 +92,10 @@ function clipLine(gradient: number, intercept: number): [number, number][] {
 
 function StraightLineDrawing() {
     const setVar = useSetVar();
-    const firstX = useVar<number>("lineFirstX", DEFAULT_FIRST[0]);
-    const firstY = useVar<number>("lineFirstY", DEFAULT_FIRST[1]);
-    const secondX = useVar<number>("lineSecondX", DEFAULT_SECOND[0]);
-    const secondY = useVar<number>("lineSecondY", DEFAULT_SECOND[1]);
+    const gradient = useVar<number>("lineGradient", DEFAULT_GRADIENT);
+    const intercept = useVar<number>("lineIntercept", DEFAULT_INTERCEPT);
+    const firstAnchor = useVar<number>("lineFirstX", DEFAULT_FIRST_X);
+    const secondAnchor = useVar<number>("lineSecondX", DEFAULT_SECOND_X);
     const { opacity, weight, isActive, hoverProps } = useHighlight("lineHighlight");
 
     const [draggingFirst, setDraggingFirst] = useState(false);
@@ -84,31 +104,47 @@ function StraightLineDrawing() {
     const draggingSecondRef = useRef(false);
     const svgRef = useRef<SVGSVGElement>(null);
 
-    const run = secondX - firstX;
-    const rise = secondY - firstY;
-    const gradient = rise / run;
-    const intercept = firstY - gradient * firstX;
+    // The points ride the line: their x is theirs, their y always obeys y = mx + c.
+    const [windowLo, windowHi] = visibleXWindow(gradient, intercept);
+    let firstX = clamp(firstAnchor, windowLo, windowHi);
+    let secondX = clamp(secondAnchor, windowLo, windowHi);
+    if (Math.abs(secondX - firstX) < 1) {
+        if (secondX >= firstX) secondX = Math.min(windowHi, firstX + 1);
+        else secondX = Math.max(windowLo, firstX - 1);
+        if (Math.abs(secondX - firstX) < 1) firstX = secondX >= firstX ? secondX - 1 : secondX + 1;
+    }
+    const firstY = round6(gradient * firstX + intercept);
+    const secondY = round6(gradient * secondX + intercept);
 
-    /** Keep the two x values apart so the line never becomes vertical. */
-    const separateX = (candidate: number, otherX: number, current: number) => {
-        const snapped = clamp(Math.round(candidate), GRID.xMin, GRID.xMax);
-        if (snapped !== otherX) return snapped;
-        const pushed = current >= otherX ? otherX + 1 : otherX - 1;
-        return clamp(pushed, GRID.xMin, GRID.xMax);
-    };
+    const run = round6(secondX - firstX);
+    const rise = round6(secondY - firstY);
 
-    const moveFirst = (event: React.PointerEvent<SVGCircleElement>) => {
-        if (!draggingFirstRef.current) return;
+    /** A drag pivots the line about the OTHER point, then re-anchors this one. */
+    const dragPoint = (
+        event: React.PointerEvent<SVGCircleElement>,
+        active: React.MutableRefObject<boolean>,
+        anchorVar: "lineFirstX" | "lineSecondX",
+        currentX: number,
+        pivotX: number,
+        pivotY: number,
+    ) => {
+        if (!active.current) return;
         const point = svgPointFromEvent(event, svgRef.current, GRID.width, GRID.height);
-        setVar("lineFirstX", separateX(GRID.fromX(point.x), secondX, firstX));
-        setVar("lineFirstY", clamp(Math.round(GRID.fromY(point.y)), GRID.yMin, GRID.yMax));
-    };
-
-    const moveSecond = (event: React.PointerEvent<SVGCircleElement>) => {
-        if (!draggingSecondRef.current) return;
-        const point = svgPointFromEvent(event, svgRef.current, GRID.width, GRID.height);
-        setVar("lineSecondX", separateX(GRID.fromX(point.x), firstX, secondX));
-        setVar("lineSecondY", clamp(Math.round(GRID.fromY(point.y)), GRID.yMin, GRID.yMax));
+        let targetX = clamp(Math.round(GRID.fromX(point.x)), GRID.xMin, GRID.xMax);
+        const targetY = clamp(Math.round(GRID.fromY(point.y)), GRID.yMin, GRID.yMax);
+        // Never let the two x values coincide: a vertical line has no gradient.
+        if (targetX === pivotX) {
+            targetX = clamp(
+                currentX >= pivotX ? pivotX + 1 : pivotX - 1,
+                GRID.xMin,
+                GRID.xMax,
+            );
+        }
+        const newGradient = clamp(round6((targetY - pivotY) / (targetX - pivotX)), -LIMIT, LIMIT);
+        const newIntercept = clamp(round6(pivotY - newGradient * pivotX), -LIMIT, LIMIT);
+        setVar("lineGradient", newGradient);
+        setVar("lineIntercept", newIntercept);
+        setVar(anchorVar, targetX);
     };
 
     const p1x = GRID.toX(firstX);
@@ -136,16 +172,16 @@ function StraightLineDrawing() {
             {/* Readout strip — above the plot. */}
             <g fontSize="12" style={{ fontVariantNumeric: "tabular-nums", ...EASE_150 }}>
                 <text x="24" y="30" fill={INK_STRUCTURE} opacity={opacity("run")}>
-                    {`run = ${run}`}
+                    {`run = ${tidy(run)}`}
                 </text>
-                <text x="130" y="30" fill={ACCENT} opacity={opacity("rise")}>
-                    {`rise = ${rise}`}
+                <text x="150" y="30" fill={ACCENT} opacity={opacity("rise")}>
+                    {`rise = ${tidy(rise)}`}
                 </text>
                 <text x="24" y="56" fill={ACCENT_TWO} opacity={opacity("intercept")}>
-                    {`y-intercept = ${tidy(intercept)}`}
+                    {`c = ${tidy(intercept)}`}
                 </text>
                 <text x="536" y="56" fill={ACCENT} textAnchor="end" opacity={opacity("rise")}>
-                    {`gradient = ${rise} ÷ ${run} = ${tidy(gradient)}`}
+                    {`m = ${tidy(rise)} ÷ ${tidy(run)} = ${tidy(gradient)}`}
                 </text>
             </g>
 
@@ -197,7 +233,7 @@ function StraightLineDrawing() {
                     textAnchor="middle"
                     style={{ fontVariantNumeric: "tabular-nums" }}
                 >
-                    {`run ${run}`}
+                    {`run ${tidy(run)}`}
                 </text>
             </g>
 
@@ -233,7 +269,7 @@ function StraightLineDrawing() {
                         textAnchor={run >= 0 ? "start" : "end"}
                         style={{ fontVariantNumeric: "tabular-nums" }}
                     >
-                        {`rise ${rise}`}
+                        {`rise ${tidy(rise)}`}
                     </text>
                 </g>
             )}
@@ -256,7 +292,7 @@ function StraightLineDrawing() {
                 </g>
             )}
 
-            {/* The two draggable points that define the line. */}
+            {/* The two draggable points that ride the line. */}
             <text
                 x={p1x}
                 y={firstY >= 5 ? p1y + 26 : p1y - 18}
@@ -265,14 +301,16 @@ function StraightLineDrawing() {
                 textAnchor="middle"
                 style={{ fontVariantNumeric: "tabular-nums" }}
             >
-                {`(${firstX}, ${firstY})`}
+                {`(${tidy(firstX)}, ${tidy(firstY)})`}
             </text>
             <DragHandle
                 x={p1x}
                 y={p1y}
                 shadowId={SHADOW_ID}
                 dragging={draggingFirst}
-                onDragMove={moveFirst}
+                onDragMove={(event) =>
+                    dragPoint(event, draggingFirstRef, "lineFirstX", firstX, secondX, secondY)
+                }
                 onDraggingChange={(value) => {
                     draggingFirstRef.current = value;
                     setDraggingFirst(value);
@@ -287,14 +325,16 @@ function StraightLineDrawing() {
                 textAnchor="middle"
                 style={{ fontVariantNumeric: "tabular-nums" }}
             >
-                {`(${secondX}, ${secondY})`}
+                {`(${tidy(secondX)}, ${tidy(secondY)})`}
             </text>
             <DragHandle
                 x={p2x}
                 y={p2y}
                 shadowId={SHADOW_ID}
                 dragging={draggingSecond}
-                onDragMove={moveSecond}
+                onDragMove={(event) =>
+                    dragPoint(event, draggingSecondRef, "lineSecondX", secondX, firstX, firstY)
+                }
                 onDraggingChange={(value) => {
                     draggingSecondRef.current = value;
                     setDraggingSecond(value);
@@ -310,26 +350,50 @@ function StraightLineFigure() {
         <Figure
             id="straight-line-builder"
             onReset={() => {
-                setVar("lineFirstX", DEFAULT_FIRST[0]);
-                setVar("lineFirstY", DEFAULT_FIRST[1]);
-                setVar("lineSecondX", DEFAULT_SECOND[0]);
-                setVar("lineSecondY", DEFAULT_SECOND[1]);
+                setVar("lineGradient", DEFAULT_GRADIENT);
+                setVar("lineIntercept", DEFAULT_INTERCEPT);
+                setVar("lineFirstX", DEFAULT_FIRST_X);
+                setVar("lineSecondX", DEFAULT_SECOND_X);
                 setVar("lineHighlight", "");
             }}
-            caption="Both teal points are yours to move. The dashed staircase counts the run and the rise between them, and the indigo dot marks where the line crosses the y-axis."
+            caption="Both teal points are yours to move, and the two sliders drive m and c directly. The dashed staircase counts the run and the rise; the indigo dot marks where the line crosses the y-axis."
         >
             <StraightLineDrawing />
+            <div className="space-y-3 px-6 pb-5">
+                <FigureSlider
+                    varName="lineGradient"
+                    label="Gradient m"
+                    {...numberPropsFromDefinition(getVariableInfo("lineGradient"))}
+                    formatValue={(v) => v.toFixed(1)}
+                />
+                <FigureSlider
+                    varName="lineIntercept"
+                    label="Intercept c"
+                    {...numberPropsFromDefinition(getVariableInfo("lineIntercept"))}
+                    formatValue={(v) => v.toFixed(1)}
+                />
+            </div>
             <InteractionHintSequence
                 hintKey="straight-line-point-drag"
                 steps={[
                     {
                         gesture: "drag",
                         label: "Drag either teal point to reshape the line",
-                        position: { x: "60%", y: "24%" },
+                        position: { x: "60%", y: "20%" },
                         dragPath: {
                             type: "line",
                             startOffset: { x: 20, y: -16 },
                             endOffset: { x: -22, y: 18 },
+                        },
+                    },
+                    {
+                        gesture: "drag-horizontal",
+                        label: "Or set m and c straight from the sliders",
+                        position: { x: "50%", y: "85%" },
+                        dragPath: {
+                            type: "line",
+                            startOffset: { x: -30, y: 0 },
+                            endOffset: { x: 30, y: 0 },
                         },
                     },
                 ]}
@@ -341,18 +405,21 @@ function StraightLineFigure() {
 // ── Live formulas ────────────────────────────────────────────────────────────
 
 function GradientFormula() {
-    const firstX = useVar<number>("lineFirstX", DEFAULT_FIRST[0]);
-    const firstY = useVar<number>("lineFirstY", DEFAULT_FIRST[1]);
-    const secondX = useVar<number>("lineSecondX", DEFAULT_SECOND[0]);
-    const secondY = useVar<number>("lineSecondY", DEFAULT_SECOND[1]);
-    const run = secondX - firstX;
-    const rise = secondY - firstY;
+    const gradient = useVar<number>("lineGradient", DEFAULT_GRADIENT);
+    const intercept = useVar<number>("lineIntercept", DEFAULT_INTERCEPT);
+    const firstAnchor = useVar<number>("lineFirstX", DEFAULT_FIRST_X);
+    const secondAnchor = useVar<number>("lineSecondX", DEFAULT_SECOND_X);
+    const [windowLo, windowHi] = visibleXWindow(gradient, intercept);
+    const firstX = clamp(firstAnchor, windowLo, windowHi);
+    const secondX = clamp(secondAnchor, windowLo, windowHi);
+    const run = round6(secondX - firstX);
+    const rise = round6(gradient * secondX - gradient * firstX);
 
     return (
         <FormulaBlock
             latex={
-                `m = \\frac{y_2 - y_1}{x_2 - x_1} = \\frac{${rise}}{${run}} ` +
-                `= \\clr{gradient}{${tidy(rise / run)}}`
+                `m = \\frac{y_2 - y_1}{x_2 - x_1} = \\frac{${tidy(rise)}}{${tidy(run)}} ` +
+                `= \\clr{gradient}{${tidy(gradient)}}`
             }
             colorMap={{ gradient: ACCENT }}
         />
@@ -360,12 +427,8 @@ function GradientFormula() {
 }
 
 function LineEquationFormula() {
-    const firstX = useVar<number>("lineFirstX", DEFAULT_FIRST[0]);
-    const firstY = useVar<number>("lineFirstY", DEFAULT_FIRST[1]);
-    const secondX = useVar<number>("lineSecondX", DEFAULT_SECOND[0]);
-    const secondY = useVar<number>("lineSecondY", DEFAULT_SECOND[1]);
-    const gradient = (secondY - firstY) / (secondX - firstX);
-    const intercept = firstY - gradient * firstX;
+    const gradient = useVar<number>("lineGradient", DEFAULT_GRADIENT);
+    const intercept = useVar<number>("lineIntercept", DEFAULT_INTERCEPT);
     const sign = intercept < 0 ? "-" : "+";
 
     return (
@@ -423,17 +486,17 @@ export const straightLinesBlocks: ReactElement[] = [
     <StackLayout key="layout-lines-insight" maxWidth="xl">
         <Block id="lines-insight" padding="sm">
             <EditableParagraph id="para-lines-insight" blockId="lines-insight">
-                Now watch the indigo dot. Lift both points by the same amount and the
-                gradient does not budge, yet the height at which the line{" "}
+                Now watch the indigo dot. Push the c slider on its own and the whole line
+                slides up or down without ever changing its steepness, while the m slider
+                pivots it about that same{" "}
                 <InlineLinkedHighlight
                     varName="lineHighlight"
                     highlightId="intercept"
                     {...linkedHighlightPropsFromDefinition(getVariableInfo("lineHighlight"))}
                 >
-                    crosses the y-axis
-                </InlineLinkedHighlight>{" "}
-                slides with them. That crossing is c, and steepness plus crossing is the
-                entire equation.
+                    crossing point
+                </InlineLinkedHighlight>
+                . Steepness plus crossing is the entire equation.
             </EditableParagraph>
         </Block>
     </StackLayout>,
@@ -461,28 +524,20 @@ export const straightLinesBlocks: ReactElement[] = [
                         hintKey: "lines-feedback-hint",
                         label: "Discover it yourself",
                         resetVars: {
+                            lineGradient: 2,
+                            lineIntercept: 1,
                             lineFirstX: -2,
-                            lineFirstY: -3,
                             lineSecondX: 2,
-                            lineSecondY: 5,
                             lineHighlight: "",
                         },
                         steps: [
                             {
                                 gesture: "drag-horizontal",
-                                label: "Slide the upper teal point left onto the y-axis — the run shrinks to 2",
-                                position: { x: "60%", y: "24%" },
-                                completionVar: "lineSecondX",
-                                completionValue: 0,
-                                completionTolerance: 0.4,
-                            },
-                            {
-                                gesture: "drag-vertical",
-                                label: "Now drop it to a rise of 6 and read the gradient in the corner",
-                                position: { x: "50%", y: "24%" },
-                                completionVar: "lineSecondY",
+                                label: "Push the m slider up to 3 — the staircase climbs 3 for every 1 across",
+                                position: { x: "50%", y: "85%" },
+                                completionVar: "lineGradient",
                                 completionValue: 3,
-                                completionTolerance: 0.4,
+                                completionTolerance: 0.2,
                             },
                         ],
                     }}
@@ -509,8 +564,36 @@ export const straightLinesBlocks: ReactElement[] = [
                     successMessage="— yes. Stepping back from (1, 4) by one across drops you 3 down, landing on (0, 1)"
                     failureMessage="— not quite."
                     hint="Put x = 1 and y = 4 into y = 3x + c and see what c has to be"
-                    reviewBlockId="lines-equation-formula"
-                    reviewLabel="Look at the equation again"
+                    visualizationHint={{
+                        blockId: "lines-figure",
+                        hintKey: "lines-intercept-feedback-hint",
+                        label: "Discover it yourself",
+                        resetVars: {
+                            lineGradient: 2,
+                            lineIntercept: 1,
+                            lineFirstX: -2,
+                            lineSecondX: 2,
+                            lineHighlight: "",
+                        },
+                        steps: [
+                            {
+                                gesture: "drag-horizontal",
+                                label: "Set the m slider to 3 so the line matches the cable car",
+                                position: { x: "50%", y: "82%" },
+                                completionVar: "lineGradient",
+                                completionValue: 3,
+                                completionTolerance: 0.2,
+                            },
+                            {
+                                gesture: "drag-horizontal",
+                                label: "Now slide c until the line runs through (1, 4) — read the indigo dot",
+                                position: { x: "50%", y: "90%" },
+                                completionVar: "lineIntercept",
+                                completionValue: 1,
+                                completionTolerance: 0.2,
+                            },
+                        ],
+                    }}
                 >
                     <InlineClozeInput
                         varName="answerLineIntercept"
