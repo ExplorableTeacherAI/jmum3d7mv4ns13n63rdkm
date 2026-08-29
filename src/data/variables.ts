@@ -1,16 +1,10 @@
 /**
- * Variables Configuration
- * =======================
- * 
- * CENTRAL PLACE TO DEFINE ALL SHARED VARIABLES
- * 
- * This file defines all variables that can be shared across sections.
- * AI agents should read this file to understand what variables are available.
- * 
- * USAGE:
- * 1. Define variables here with their default values and metadata
- * 2. Use them in any section with: const x = useVar('variableName', defaultValue)
- * 3. Update them with: setVar('variableName', newValue)
+ * Variables Configuration — Coordinate Geometry lesson
+ * ===================================================
+ *
+ * Single source of truth for every shared value in the lesson.
+ * Sections read/write these with useVar / useSetVar, and inline
+ * components pull their props from these definitions.
  */
 
 import { type VarValue } from '@/stores';
@@ -55,110 +49,274 @@ export interface VariableDefinition {
     schema?: string;
 }
 
-/**
- * =====================================================
- * 🎯 DEFINE YOUR VARIABLES HERE
- * =====================================================
- * 
- * SUPPORTED TYPES:
- * 
- * 1. NUMBER (slider):
- *    { defaultValue: 5, type: 'number', min: 0, max: 10, step: 1 }
- * 
- * 2. TEXT (free text):
- *    { defaultValue: 'Hello', type: 'text', placeholder: 'Enter text...' }
- * 
- * 3. SELECT (dropdown):
- *    { defaultValue: 'sine', type: 'select', options: ['sine', 'cosine', 'tangent'] }
- * 
- * 4. BOOLEAN (toggle):
- *    { defaultValue: true, type: 'boolean' }
- * 
- * 5. ARRAY (list of numbers):
- *    { defaultValue: [1, 2, 3], type: 'array' }
- * 
- * 6. OBJECT (complex data):
- *    { defaultValue: { x: 5, y: 10 }, type: 'object', schema: '{ x: number, y: number }' }
- */
+const ACCENT = '#62D0AD';        // Soft Teal — the quantity the student controls
+const ACCENT_TWO = '#8E90F5';    // Soft Indigo — its covariation partner
+const ANSWER = '#8E90F5';
+
 export const variableDefinitions: Record<string, VariableDefinition> = {
-    // ========================================
-    // ADD YOUR VARIABLES HERE
-    // ========================================
 
-    // Uncomment and modify these examples for your lesson:
+    // ═════════════════════════════════════════════════════════
+    // PART 1a — Distance between two points
+    // ═════════════════════════════════════════════════════════
 
-    /*
-    // ─────────────────────────────────────────
-    // NUMBER - Use with sliders
-    // ─────────────────────────────────────────
-    myValue: {
+    distanceDropX: {
+        defaultValue: 10,
+        type: 'number',
+        label: 'Drop-off x',
+        description: 'x coordinate of the draggable drop-off point B',
+        min: -1,
+        max: 11,
+        step: 1,
+        color: ACCENT,
+    },
+    distanceDropY: {
+        defaultValue: 7,
+        type: 'number',
+        label: 'Drop-off y',
+        description: 'y coordinate of the draggable drop-off point B',
+        min: -1,
+        max: 9,
+        step: 1,
+        color: ACCENT,
+    },
+    distanceHighlight: {
+        defaultValue: '',
+        type: 'text',
+        label: 'Distance figure highlight',
+        description: "Which part of the distance figure is highlighted: '' | 'across' | 'up' | 'hop'",
+        color: ACCENT,
+        bgColor: 'rgba(98, 208, 173, 0.22)',
+    },
+    answerDistanceNear: {
+        defaultValue: '',
+        type: 'text',
+        label: 'Short hop answer',
+        description: 'Student answer for the distance from the depot (2, 1) to (5, 5)',
+        placeholder: '???',
+        correctAnswer: '5',
+        color: ANSWER,
+    },
+    answerDistanceHop: {
+        defaultValue: '',
+        type: 'text',
+        label: 'Distance answer',
+        description: 'Student answer for the distance between (1, 2) and (6, 14)',
+        placeholder: '???',
+        correctAnswer: '13',
+        color: ANSWER,
+    },
+
+    // ═════════════════════════════════════════════════════════
+    // PART 1b — Midpoint
+    // ═════════════════════════════════════════════════════════
+
+    midpointFriendX: {
+        defaultValue: 6,
+        type: 'number',
+        label: "Friend's x",
+        description: "x coordinate of the draggable second house B",
+        min: -5,
+        max: 8,
+        step: 1,
+        color: ACCENT_TWO,
+    },
+    midpointFriendY: {
+        defaultValue: 7,
+        type: 'number',
+        label: "Friend's y",
+        description: "y coordinate of the draggable second house B",
+        min: -2,
+        max: 9,
+        step: 1,
+        color: ACCENT_TWO,
+    },
+    midpointGuessX: {
+        defaultValue: -1,
+        type: 'number',
+        label: 'Meeting point x',
+        description: "x coordinate of the student's draggable meeting marker",
+        min: -6,
+        max: 8,
+        step: 0.5,
+        color: ACCENT,
+    },
+    midpointGuessY: {
+        defaultValue: 7,
+        type: 'number',
+        label: 'Meeting point y',
+        description: "y coordinate of the student's draggable meeting marker",
+        min: -3,
+        max: 9,
+        step: 0.5,
+        color: ACCENT,
+    },
+    midpointHighlight: {
+        defaultValue: '',
+        type: 'text',
+        label: 'Midpoint figure highlight',
+        description: "Which part of the midpoint figure is highlighted: '' | 'toHome' | 'toFriend' | 'meeting'",
+        color: ACCENT,
+        bgColor: 'rgba(98, 208, 173, 0.22)',
+    },
+    answerMidpointX: {
+        defaultValue: '',
+        type: 'text',
+        label: 'Midpoint answer x',
+        description: 'Student answer for the x coordinate of the midpoint of (2, -3) and (10, 7)',
+        placeholder: '???',
+        correctAnswer: '6',
+        color: ANSWER,
+    },
+    answerMidpointY: {
+        defaultValue: '',
+        type: 'text',
+        label: 'Midpoint answer y',
+        description: 'Student answer for the y coordinate of the midpoint of (2, -3) and (10, 7)',
+        placeholder: '???',
+        correctAnswer: '2',
+        color: ANSWER,
+    },
+
+    // ═════════════════════════════════════════════════════════
+    // PART 2 — Straight lines
+    // ═════════════════════════════════════════════════════════
+
+    lineFirstX: {
+        defaultValue: -2,
+        type: 'number',
+        label: 'First point x',
+        description: 'x coordinate of the first draggable point on the line',
+        min: -6,
+        max: 6,
+        step: 1,
+        color: ACCENT,
+    },
+    lineFirstY: {
+        defaultValue: -3,
+        type: 'number',
+        label: 'First point y',
+        description: 'y coordinate of the first draggable point on the line',
+        min: -6,
+        max: 6,
+        step: 1,
+        color: ACCENT,
+    },
+    lineSecondX: {
+        defaultValue: 2,
+        type: 'number',
+        label: 'Second point x',
+        description: 'x coordinate of the second draggable point on the line',
+        min: -6,
+        max: 6,
+        step: 1,
+        color: ACCENT,
+    },
+    lineSecondY: {
         defaultValue: 5,
         type: 'number',
-        label: 'My Value',
-        description: 'A number that controls something',
-        unit: 'm',           // optional unit display
-        min: 0,
-        max: 10,
-        step: 0.5,
+        label: 'Second point y',
+        description: 'y coordinate of the second draggable point on the line',
+        min: -6,
+        max: 6,
+        step: 1,
+        color: ACCENT,
     },
-
-    // ─────────────────────────────────────────
-    // TEXT - Free text input
-    // ─────────────────────────────────────────
-    lessonTitle: {
-        defaultValue: 'My Lesson',
+    lineHighlight: {
+        defaultValue: '',
         type: 'text',
-        label: 'Lesson Title',
-        description: 'The title of your lesson',
-        placeholder: 'Enter a title...',
+        label: 'Line figure highlight',
+        description: "Which part of the line figure is highlighted: '' | 'run' | 'rise' | 'intercept'",
+        color: ACCENT,
+        bgColor: 'rgba(98, 208, 173, 0.22)',
+    },
+    answerLineGradient: {
+        defaultValue: '',
+        type: 'text',
+        label: 'Gradient answer',
+        description: 'Student answer for the gradient of the line through (1, 4) and (4, 13)',
+        placeholder: '???',
+        correctAnswer: '3',
+        color: ANSWER,
+    },
+    answerLineIntercept: {
+        defaultValue: '',
+        type: 'text',
+        label: 'Intercept answer',
+        description: 'Student answer for the y-intercept of the line through (1, 4) and (4, 13)',
+        placeholder: '???',
+        correctAnswer: '1',
+        color: ANSWER,
     },
 
-    // ─────────────────────────────────────────
-    // SELECT - Dropdown with options
-    // ─────────────────────────────────────────
-    difficulty: {
-        defaultValue: 'medium',
-        type: 'select',
-        label: 'Difficulty',
-        description: 'The difficulty level of the lesson',
-        options: ['easy', 'medium', 'hard', 'expert'],
-    },
+    // ═════════════════════════════════════════════════════════
+    // PART 3 — Circles
+    // ═════════════════════════════════════════════════════════
 
-    // ─────────────────────────────────────────
-    // BOOLEAN - Toggle switch
-    // ─────────────────────────────────────────
-    showHints: {
-        defaultValue: true,
-        type: 'boolean',
-        label: 'Show Hints',
-        description: 'Toggle to show or hide hints',
+    circleCentreX: {
+        defaultValue: 1,
+        type: 'number',
+        label: 'Centre x',
+        description: 'x coordinate of the draggable circle centre',
+        min: -3,
+        max: 3,
+        step: 1,
+        color: ACCENT_TWO,
     },
-
-    // ─────────────────────────────────────────
-    // ARRAY - List of numbers
-    // ─────────────────────────────────────────
-    dataPoints: {
-        defaultValue: [1, 4, 9, 16, 25],
-        type: 'array',
-        label: 'Data Points',
-        description: 'Y-values for plotting a graph',
+    circleCentreY: {
+        defaultValue: -2,
+        type: 'number',
+        label: 'Centre y',
+        description: 'y coordinate of the draggable circle centre',
+        min: -3,
+        max: 3,
+        step: 1,
+        color: ACCENT_TWO,
     },
-
-    // ─────────────────────────────────────────
-    // OBJECT - Complex structured data
-    // ─────────────────────────────────────────
-    graphSettings: {
-        defaultValue: { 
-            xMin: -10, 
-            xMax: 10, 
-            showGrid: true 
-        },
-        type: 'object',
-        label: 'Graph Settings',
-        description: 'Configuration for the graph display',
-        schema: '{ xMin: number, xMax: number, showGrid: boolean }',
+    circleRadius: {
+        defaultValue: 4,
+        type: 'number',
+        label: 'Radius',
+        description: 'Radius of the circle, set by dragging the rim handle',
+        min: 1,
+        max: 5,
+        step: 1,
+        color: ACCENT,
     },
-    */
+    circleHighlight: {
+        defaultValue: '',
+        type: 'text',
+        label: 'Circle figure highlight',
+        description: "Which part of the circle figure is highlighted: '' | 'centre' | 'radius'",
+        color: ACCENT,
+        bgColor: 'rgba(98, 208, 173, 0.22)',
+    },
+    answerCircleCentreX: {
+        defaultValue: '',
+        type: 'text',
+        label: 'Circle centre answer x',
+        description: 'Student answer for the x coordinate of the centre of (x-2)^2 + (y+3)^2 = 25',
+        placeholder: '???',
+        correctAnswer: '2',
+        color: ANSWER,
+    },
+    answerCircleCentreY: {
+        defaultValue: '',
+        type: 'text',
+        label: 'Circle centre answer y',
+        description: 'Student answer for the y coordinate of the centre of (x-2)^2 + (y+3)^2 = 25',
+        placeholder: '???',
+        correctAnswer: ['-3', '−3'],
+        color: ANSWER,
+    },
+    answerCircleRadius: {
+        defaultValue: '',
+        type: 'text',
+        label: 'Circle radius answer',
+        description: 'Student answer for the radius of (x-2)^2 + (y+3)^2 = 25',
+        placeholder: '???',
+        correctAnswer: '5',
+        color: ANSWER,
+    },
 };
 
 /**
@@ -195,7 +353,6 @@ export const getDefaultValues = (): Record<string, VarValue> => {
 
 /**
  * Get number props for InlineScrubbleNumber from a variable definition.
- * Use with getVariableInfo(name) in blocks.tsx, or getExampleVariableInfo(name) in exampleBlocks.tsx.
  */
 export function numberPropsFromDefinition(def: VariableDefinition | undefined): {
     defaultValue?: number;
@@ -215,12 +372,7 @@ export function numberPropsFromDefinition(def: VariableDefinition | undefined): 
 }
 
 /**
- * Get cloze input props for InlineClozeInput from a variable definition.
- * Use with getVariableInfo(name) in blocks.tsx, or getExampleVariableInfo(name) in exampleBlocks.tsx.
- */
-/**
  * Get cloze choice props for InlineClozeChoice from a variable definition.
- * Use with getVariableInfo(name) in blocks.tsx.
  */
 export function choicePropsFromDefinition(def: VariableDefinition | undefined): {
     placeholder?: string;
@@ -237,7 +389,6 @@ export function choicePropsFromDefinition(def: VariableDefinition | undefined): 
 
 /**
  * Get toggle props for InlineToggle from a variable definition.
- * Use with getVariableInfo(name) in blocks.tsx.
  */
 export function togglePropsFromDefinition(def: VariableDefinition | undefined): {
     color?: string;
@@ -267,15 +418,6 @@ export function clozePropsFromDefinition(def: VariableDefinition | undefined): {
 
 /**
  * Get spot-color props for InlineSpotColor from a variable definition.
- * Extracts the `color` field.
- *
- * @example
- * <InlineSpotColor
- *     varName="radius"
- *     {...spotColorPropsFromDefinition(getVariableInfo('radius'))}
- * >
- *     radius
- * </InlineSpotColor>
  */
 export function spotColorPropsFromDefinition(def: VariableDefinition | undefined): {
     color: string;
@@ -287,16 +429,6 @@ export function spotColorPropsFromDefinition(def: VariableDefinition | undefined
 
 /**
  * Get linked-highlight props for InlineLinkedHighlight from a variable definition.
- * Extracts the `color` and `bgColor` fields.
- *
- * @example
- * <InlineLinkedHighlight
- *     varName="activeHighlight"
- *     highlightId="radius"
- *     {...linkedHighlightPropsFromDefinition(getVariableInfo('activeHighlight'))}
- * >
- *     radius
- * </InlineLinkedHighlight>
  */
 export function linkedHighlightPropsFromDefinition(def: VariableDefinition | undefined): {
     color?: string;
@@ -310,17 +442,6 @@ export function linkedHighlightPropsFromDefinition(def: VariableDefinition | und
 
 /**
  * Build the `variables` prop for FormulaBlock from variable definitions.
- *
- * Takes an array of variable names and returns the config map expected by
- * `<FormulaBlock variables={...} />`.
- *
- * @example
- * import { scrubVarsFromDefinitions } from './variables';
- *
- * <FormulaBlock
- *     latex="\scrub{mass} \times \scrub{accel}"
- *     variables={scrubVarsFromDefinitions(['mass', 'accel'])}
- * />
  */
 export function scrubVarsFromDefinitions(
     varNames: string[],
