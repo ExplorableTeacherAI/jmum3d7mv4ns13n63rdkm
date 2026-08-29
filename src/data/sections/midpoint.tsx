@@ -320,9 +320,8 @@ export const midpointBlocks: ReactElement[] = [
     <StackLayout key="layout-midpoint-setup" maxWidth="xl">
         <Block id="midpoint-setup" padding="sm">
             <EditableParagraph id="para-midpoint-setup" blockId="midpoint-setup">
-                You and a friend live at opposite ends of the neighbourhood and want to
-                meet in the middle. Commit to a spot: drag the big teal marker to where
-                you think halfway is, and the two ropes will tell you whether the{" "}
+                You and a friend want to meet in the middle. Drop the teal marker where
+                you think halfway is. The ropes say whether the{" "}
                 <InlineLinkedHighlight
                     varName="midpointHighlight"
                     highlightId="toHome"
@@ -330,7 +329,7 @@ export const midpointBlocks: ReactElement[] = [
                 >
                     walk from home
                 </InlineLinkedHighlight>{" "}
-                really matches the walk from your friend's door.
+                matches the walk from theirs.
             </EditableParagraph>
         </Block>
     </StackLayout>,
@@ -344,10 +343,9 @@ export const midpointBlocks: ReactElement[] = [
     <StackLayout key="layout-midpoint-insight" maxWidth="xl">
         <Block id="midpoint-insight" padding="sm">
             <EditableParagraph id="para-midpoint-insight" blockId="midpoint-insight">
-                Once the ropes turn green, read the marker's coordinates against the two
-                houses. The x you landed on sits exactly between the two x values, and the
-                same is true of the y, because a midpoint is an average. Subtracting the
-                coordinates only measures the gap, and a gap is not a place.
+                Your x lands between their two x values, and your y between their two y
+                values. A midpoint is an average. Subtracting gives you the gap, and a gap
+                is not a place.
             </EditableParagraph>
         </Block>
     </StackLayout>,
