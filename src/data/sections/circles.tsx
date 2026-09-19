@@ -15,7 +15,9 @@ import {
     EditableParagraph,
     InlineClozeInput,
     InlineFeedback,
+    InlineFormula,
     InlineLinkedHighlight,
+    InlineTrigger,
     InteractionHintSequence,
 } from "@/components/atoms";
 import { Figure, FormulaBlock } from "@/components/molecules";
@@ -25,6 +27,7 @@ import {
     getVariableInfo,
     clozePropsFromDefinition,
     linkedHighlightPropsFromDefinition,
+    scrubVarsFromDefinitions,
 } from "../variables";
 import {
     ACCENT,
@@ -382,6 +385,8 @@ function CircleFigure() {
 
 // ── Live formula ─────────────────────────────────────────────────────────────
 
+const RADIUS_SCRUB_VARS = scrubVarsFromDefinitions(["circleRadius"]);
+
 function CircleEquationFormula() {
     const centreX = useVar<number>("circleCentreX", DEFAULT_CENTRE[0]);
     const centreY = useVar<number>("circleCentreY", DEFAULT_CENTRE[1]);
@@ -392,9 +397,10 @@ function CircleEquationFormula() {
             latex={
                 `\\clr{centre}{${bracketLatex("x", centreX)}} + ` +
                 `\\clr{centre}{${bracketLatex("y", centreY)}} = ` +
-                `\\clr{radius}{${radius}}^2 = ${radius * radius}`
+                `\\scrub{circleRadius}^2 = \\clr{radius}{${radius * radius}}`
             }
             colorMap={{ centre: ACCENT_TWO, radius: ACCENT }}
+            variables={RADIUS_SCRUB_VARS}
         />
     );
 }
@@ -451,11 +457,34 @@ export const circlesBlocks: ReactElement[] = [
                     varName="circleHighlight"
                     highlightId="centre"
                     {...linkedHighlightPropsFromDefinition(getVariableInfo("circleHighlight"))}
+                    color={ACCENT_TWO}
+                    bgColor="rgba(142, 144, 245, 0.22)"
                 >
                     centre
                 </InlineLinkedHighlight>
-                . And the number on the right is r², never r, so a circle ending in 25 has
-                a radius of 5.
+                . And the number on the right is{" "}
+                <InlineFormula
+                    id="formula-circles-insight-r-squared"
+                    latex="\clr{radius}{r}^2"
+                    colorMap={{ radius: ACCENT }}
+                />
+                , never{" "}
+                <InlineFormula
+                    id="formula-circles-insight-r"
+                    latex="\clr{radius}{r}"
+                    colorMap={{ radius: ACCENT }}
+                />
+                , so a circle ending in 25 has{" "}
+                <InlineTrigger
+                    id="trigger-circles-radius-five"
+                    varName="circleRadius"
+                    value={5}
+                    color={ACCENT}
+                    bgColor="rgba(98, 208, 173, 0.18)"
+                >
+                    a radius of 5
+                </InlineTrigger>
+                .
             </EditableParagraph>
         </Block>
     </StackLayout>,
@@ -463,7 +492,13 @@ export const circlesBlocks: ReactElement[] = [
     <StackLayout key="layout-circles-question" maxWidth="xl">
         <Block id="circles-question" padding="md">
             <EditableParagraph id="para-circles-question" blockId="circles-question">
-                A roundabout is described by (x − 2)² + (y + 3)² = 25. Its centre sits at
+                A roundabout is described by{" "}
+                <InlineFormula
+                    id="formula-circles-question-equation"
+                    latex="\clr{centre}{(x - 2)^2} + \clr{centre}{(y + 3)^2} = \clr{radius}{25}"
+                    colorMap={{ centre: ACCENT_TWO, radius: ACCENT }}
+                />
+                . Its centre sits at
                 x ={" "}
                 <InlineFeedback
                     varName="answerCircleCentreX"

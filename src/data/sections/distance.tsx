@@ -18,6 +18,7 @@ import {
     InlineFeedback,
     InlineLinkedHighlight,
     InlineScrubbleNumber,
+    InlineTooltip,
     InteractionHintSequence,
 } from "@/components/atoms";
 import { Figure } from "@/components/molecules";
@@ -34,6 +35,8 @@ import {
     ACCENT,
     DragHandle,
     EASE_150,
+    GAP_ACROSS,
+    GAP_UP,
     GridBackdrop,
     Halo,
     HandleShadow,
@@ -102,10 +105,10 @@ function DistanceDrawing() {
 
             {/* Readout strip — above the plot, never over it. */}
             <g fontSize="12" style={{ fontVariantNumeric: "tabular-nums", ...EASE_150 }}>
-                <text x="24" y="30" fill={INK_STRUCTURE} opacity={opacity("across")}>
+                <text x="24" y="30" fill={GAP_ACROSS} opacity={opacity("across")}>
                     {`across = ${Math.abs(across)}`}
                 </text>
-                <text x="150" y="30" fill={INK_STRUCTURE} opacity={opacity("up")}>
+                <text x="150" y="30" fill={GAP_UP} opacity={opacity("up")}>
                     {`up = ${Math.abs(up)}`}
                 </text>
                 <text x="24" y="56" fill={INK}>
@@ -142,7 +145,7 @@ function DistanceDrawing() {
                             y1={ay}
                             x2={cornerX}
                             y2={cornerY}
-                            stroke={INK_STRUCTURE}
+                            stroke={GAP_ACROSS}
                             strokeWidth={weight("across", 2) + 6}
                             strokeLinecap="round"
                         />
@@ -152,7 +155,7 @@ function DistanceDrawing() {
                         y1={ay}
                         x2={cornerX}
                         y2={cornerY}
-                        stroke={INK_STRUCTURE}
+                        stroke={GAP_ACROSS}
                         strokeWidth={weight("across", 2)}
                         strokeLinecap="round"
                     />
@@ -178,7 +181,7 @@ function DistanceDrawing() {
                             y1={cornerY}
                             x2={bx}
                             y2={by}
-                            stroke={INK_STRUCTURE}
+                            stroke={GAP_UP}
                             strokeWidth={weight("up", 2) + 6}
                             strokeLinecap="round"
                         />
@@ -188,7 +191,7 @@ function DistanceDrawing() {
                         y1={cornerY}
                         x2={bx}
                         y2={by}
-                        stroke={INK_STRUCTURE}
+                        stroke={GAP_UP}
                         strokeWidth={weight("up", 2)}
                         strokeLinecap="round"
                     />
@@ -306,10 +309,12 @@ function DistanceFormula() {
 
     return (
         <FormulaBlock
-            latex={`d = \\sqrt{(x_2 - x_1)^2 + (y_2 - y_1)^2} = \\sqrt{${across}^2 + ${up}^2} = \\clr{hop}{${formatHop(
-                Math.sqrt(sum),
-            )}}`}
-            colorMap={{ hop: ACCENT }}
+            latex={
+                `\\clr{hop}{d} = \\sqrt{\\clr{across}{(x_2 - x_1)^2} + \\clr{up}{(y_2 - y_1)^2}}` +
+                ` = \\sqrt{\\clr{across}{${across}^2} + \\clr{up}{${up}^2}}` +
+                ` = \\clr{hop}{${formatHop(Math.sqrt(sum))}}`
+            }
+            colorMap={{ hop: ACCENT, across: GAP_ACROSS, up: GAP_UP }}
         />
     );
 }
@@ -347,7 +352,14 @@ export const distanceBlocks: ReactElement[] = [
                     varName="distanceDropY"
                     {...numberPropsFromDefinition(getVariableInfo("distanceDropY"))}
                 />
-                {" "}up, and a right-angled triangle snaps into place beneath it. The{" "}
+                {" "}up, and a{" "}
+                <InlineTooltip
+                    id="tooltip-distance-right-angled-triangle"
+                    tooltip="A triangle with one 90° corner. Pythagoras' theorem says the squares of its two short legs add up to the square of the sloping side."
+                >
+                    right-angled triangle
+                </InlineTooltip>{" "}
+                snaps into place beneath it. The{" "}
                 <InlineLinkedHighlight
                     varName="distanceHighlight"
                     highlightId="hop"

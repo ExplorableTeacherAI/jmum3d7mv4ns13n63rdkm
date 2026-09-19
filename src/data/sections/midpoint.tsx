@@ -16,6 +16,7 @@ import {
     InlineClozeInput,
     InlineFeedback,
     InlineLinkedHighlight,
+    InlineTooltip,
     InteractionHintSequence,
 } from "@/components/atoms";
 import { Figure, FormulaBlock } from "@/components/molecules";
@@ -25,6 +26,7 @@ import {
     getVariableInfo,
     clozePropsFromDefinition,
     linkedHighlightPropsFromDefinition,
+    scrubVarsFromDefinitions,
 } from "../variables";
 import {
     ACCENT,
@@ -287,6 +289,14 @@ function MidpointFigure() {
 
 // ── Live formula ─────────────────────────────────────────────────────────────
 
+// The friend's coordinates are scrubbable inside the formula; negatives keep
+// their brackets so (-4) + (-3) never reads as a subtraction.
+const FRIEND_SCRUB_DEFS = scrubVarsFromDefinitions(["midpointFriendX", "midpointFriendY"]);
+const FRIEND_SCRUB_VARS = {
+    midpointFriendX: { ...FRIEND_SCRUB_DEFS.midpointFriendX, formatValue: signedTerm },
+    midpointFriendY: { ...FRIEND_SCRUB_DEFS.midpointFriendY, formatValue: signedTerm },
+};
+
 function MidpointFormula() {
     const friendX = useVar<number>("midpointFriendX", DEFAULT_FRIEND[0]);
     const friendY = useVar<number>("midpointFriendY", DEFAULT_FRIEND[1]);
@@ -296,12 +306,14 @@ function MidpointFormula() {
     return (
         <FormulaBlock
             latex={
-                `M = \\left( \\frac{x_1 + x_2}{2},\\ \\frac{y_1 + y_2}{2} \\right)` +
-                ` = \\left( \\frac{${signedTerm(HOME[0])} + ${signedTerm(friendX)}}{2},\\ ` +
-                `\\frac{${signedTerm(HOME[1])} + ${signedTerm(friendY)}}{2} \\right)` +
+                `\\clr{mid}{M} = \\left( \\frac{\\clr{home}{x_1} + \\clr{friend}{x_2}}{2},\\ ` +
+                `\\frac{\\clr{home}{y_1} + \\clr{friend}{y_2}}{2} \\right)` +
+                ` = \\left( \\frac{\\clr{home}{${signedTerm(HOME[0])}} + \\scrub{midpointFriendX}}{2},\\ ` +
+                `\\frac{\\clr{home}{${signedTerm(HOME[1])}} + \\scrub{midpointFriendY}}{2} \\right)` +
                 ` = \\clr{mid}{(${midX},\\ ${midY})}`
             }
-            colorMap={{ mid: ACCENT }}
+            colorMap={{ mid: ACCENT, home: INK_STRUCTURE, friend: ACCENT_TWO }}
+            variables={FRIEND_SCRUB_VARS}
         />
     );
 }
@@ -329,7 +341,16 @@ export const midpointBlocks: ReactElement[] = [
                 >
                     walk from home
                 </InlineLinkedHighlight>{" "}
-                matches the walk from theirs.
+                matches the{" "}
+                <InlineLinkedHighlight
+                    id="link-midpoint-to-friend"
+                    varName="midpointHighlight"
+                    highlightId="toFriend"
+                    {...linkedHighlightPropsFromDefinition(getVariableInfo("midpointHighlight"))}
+                >
+                    walk from theirs
+                </InlineLinkedHighlight>
+                .
             </EditableParagraph>
         </Block>
     </StackLayout>,
@@ -344,7 +365,14 @@ export const midpointBlocks: ReactElement[] = [
         <Block id="midpoint-insight" padding="sm">
             <EditableParagraph id="para-midpoint-insight" blockId="midpoint-insight">
                 Your x lands between their two x values, and your y between their two y
-                values. A midpoint is an average. Subtracting gives you the gap, and a gap
+                values. A midpoint is an{" "}
+                <InlineTooltip
+                    id="tooltip-midpoint-average"
+                    tooltip="Add the two values together, then divide by 2. The result always lands exactly between them."
+                >
+                    average
+                </InlineTooltip>
+                . Subtracting gives you the gap, and a gap
                 is not a place.
             </EditableParagraph>
         </Block>

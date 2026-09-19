@@ -51,6 +51,8 @@ export interface VariableDefinition {
 
 const ACCENT = '#62D0AD';        // Soft Teal — the quantity the student controls
 const ACCENT_TWO = '#8E90F5';    // Soft Indigo — its covariation partner
+const GAP_ACROSS = '#F7B23B';    // Warm Amber — horizontal gap (across / run)
+const GAP_UP = '#F8A0CD';        // Soft Rose — vertical gap (up / rise)
 const ANSWER = '#8E90F5';
 
 export const variableDefinitions: Record<string, VariableDefinition> = {
@@ -67,7 +69,7 @@ export const variableDefinitions: Record<string, VariableDefinition> = {
         min: -1,
         max: 11,
         step: 1,
-        color: ACCENT,
+        color: GAP_ACROSS,
     },
     distanceDropY: {
         defaultValue: 7,
@@ -77,7 +79,7 @@ export const variableDefinitions: Record<string, VariableDefinition> = {
         min: -1,
         max: 9,
         step: 1,
-        color: ACCENT,
+        color: GAP_UP,
     },
     distanceHighlight: {
         defaultValue: '',

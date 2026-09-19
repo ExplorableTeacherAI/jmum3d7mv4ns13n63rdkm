@@ -16,7 +16,9 @@ import {
     EditableParagraph,
     InlineClozeInput,
     InlineFeedback,
+    InlineFormula,
     InlineLinkedHighlight,
+    InlineTooltip,
     InteractionHintSequence,
 } from "@/components/atoms";
 import { Figure, FigureSlider, FormulaBlock } from "@/components/molecules";
@@ -27,17 +29,19 @@ import {
     clozePropsFromDefinition,
     linkedHighlightPropsFromDefinition,
     numberPropsFromDefinition,
+    scrubVarsFromDefinitions,
 } from "../variables";
 import {
     ACCENT,
     ACCENT_TWO,
     DragHandle,
     EASE_150,
+    GAP_ACROSS,
+    GAP_UP,
     GridBackdrop,
     Halo,
     HandleShadow,
     INK,
-    INK_STRUCTURE,
     makeGrid,
     svgPointFromEvent,
     useHighlight,
@@ -171,10 +175,10 @@ function StraightLineDrawing() {
 
             {/* Readout strip — above the plot. */}
             <g fontSize="12" style={{ fontVariantNumeric: "tabular-nums", ...EASE_150 }}>
-                <text x="24" y="30" fill={INK_STRUCTURE} opacity={opacity("run")}>
+                <text x="24" y="30" fill={GAP_ACROSS} opacity={opacity("run")}>
                     {`run = ${tidy(run)}`}
                 </text>
-                <text x="150" y="30" fill={ACCENT} opacity={opacity("rise")}>
+                <text x="150" y="30" fill={GAP_UP} opacity={opacity("rise")}>
                     {`rise = ${tidy(rise)}`}
                 </text>
                 <text x="24" y="56" fill={ACCENT_TWO} opacity={opacity("intercept")}>
@@ -210,7 +214,7 @@ function StraightLineDrawing() {
                         y1={p1y}
                         x2={cornerX}
                         y2={cornerY}
-                        stroke={INK_STRUCTURE}
+                        stroke={GAP_ACROSS}
                         strokeWidth={weight("run", 2) + 6}
                         strokeLinecap="round"
                     />
@@ -220,7 +224,7 @@ function StraightLineDrawing() {
                     y1={p1y}
                     x2={cornerX}
                     y2={cornerY}
-                    stroke={INK_STRUCTURE}
+                    stroke={GAP_ACROSS}
                     strokeWidth={weight("run", 2)}
                     strokeLinecap="round"
                     strokeDasharray="5 4"
@@ -246,7 +250,7 @@ function StraightLineDrawing() {
                             y1={cornerY}
                             x2={p2x}
                             y2={p2y}
-                            stroke={ACCENT}
+                            stroke={GAP_UP}
                             strokeWidth={weight("rise", 2.5) + 6}
                             strokeLinecap="round"
                         />
@@ -256,7 +260,7 @@ function StraightLineDrawing() {
                         y1={cornerY}
                         x2={p2x}
                         y2={p2y}
-                        stroke={ACCENT}
+                        stroke={GAP_UP}
                         strokeWidth={weight("rise", 2.5)}
                         strokeLinecap="round"
                         strokeDasharray="5 4"
@@ -418,26 +422,34 @@ function GradientFormula() {
     return (
         <FormulaBlock
             latex={
-                `m = \\frac{y_2 - y_1}{x_2 - x_1} = \\frac{${tidy(rise)}}{${tidy(run)}} ` +
+                `\\clr{gradient}{m} = \\frac{\\clr{rise}{y_2 - y_1}}{\\clr{run}{x_2 - x_1}} ` +
+                `= \\frac{\\clr{rise}{${tidy(rise)}}}{\\clr{run}{${tidy(run)}}} ` +
                 `= \\clr{gradient}{${tidy(gradient)}}`
             }
-            colorMap={{ gradient: ACCENT }}
+            colorMap={{ gradient: ACCENT, rise: GAP_UP, run: GAP_ACROSS }}
         />
     );
 }
 
+// m and c are scrubbable inside the equation. The sign of c is drawn by the
+// equation itself, so the scrubbable number shows its size only.
+const LINE_SCRUB_DEFS = scrubVarsFromDefinitions(["lineGradient", "lineIntercept"]);
+const LINE_SCRUB_VARS = {
+    lineGradient: { ...LINE_SCRUB_DEFS.lineGradient, formatValue: tidy },
+    lineIntercept: {
+        ...LINE_SCRUB_DEFS.lineIntercept,
+        formatValue: (value: number) => tidy(Math.abs(value)),
+    },
+};
+
 function LineEquationFormula() {
-    const gradient = useVar<number>("lineGradient", DEFAULT_GRADIENT);
     const intercept = useVar<number>("lineIntercept", DEFAULT_INTERCEPT);
     const sign = intercept < 0 ? "-" : "+";
 
     return (
         <FormulaBlock
-            latex={
-                `y = \\clr{gradient}{${tidy(gradient)}}x ${sign} ` +
-                `\\clr{intercept}{${tidy(Math.abs(intercept))}}`
-            }
-            colorMap={{ gradient: ACCENT, intercept: ACCENT_TWO }}
+            latex={`y = \\scrub{lineGradient}x ${sign} \\scrub{lineIntercept}`}
+            variables={LINE_SCRUB_VARS}
         />
     );
 }
@@ -462,11 +474,30 @@ export const straightLinesBlocks: ReactElement[] = [
                     varName="lineHighlight"
                     highlightId="run"
                     {...linkedHighlightPropsFromDefinition(getVariableInfo("lineHighlight"))}
+                    color={GAP_ACROSS}
+                    bgColor="rgba(247, 178, 59, 0.22)"
                 >
                     run
                 </InlineLinkedHighlight>
-                , and one step up, which is the rise. Their ratio is the gradient, the
-                single number that decides how steep the line is.
+                , and one step up, which is the{" "}
+                <InlineLinkedHighlight
+                    id="link-lines-rise"
+                    varName="lineHighlight"
+                    highlightId="rise"
+                    {...linkedHighlightPropsFromDefinition(getVariableInfo("lineHighlight"))}
+                    color={GAP_UP}
+                    bgColor="rgba(248, 160, 205, 0.22)"
+                >
+                    rise
+                </InlineLinkedHighlight>
+                . Their ratio is the{" "}
+                <InlineTooltip
+                    id="tooltip-lines-gradient"
+                    tooltip="How steep a line is: rise divided by run. A negative gradient means the line falls as you move right."
+                >
+                    gradient
+                </InlineTooltip>
+                , the single number that decides how steep the line is.
             </EditableParagraph>
         </Block>
     </StackLayout>,
@@ -486,13 +517,26 @@ export const straightLinesBlocks: ReactElement[] = [
     <StackLayout key="layout-lines-insight" maxWidth="xl">
         <Block id="lines-insight" padding="sm">
             <EditableParagraph id="para-lines-insight" blockId="lines-insight">
-                Now watch the indigo dot. Push the c slider on its own and the whole line
-                slides up or down without ever changing its steepness, while the m slider
-                pivots it about that same{" "}
+                Now watch the indigo dot. Push the{" "}
+                <InlineFormula
+                    id="formula-lines-insight-c"
+                    latex="\clr{intercept}{c}"
+                    colorMap={{ intercept: ACCENT_TWO }}
+                />{" "}
+                slider on its own and the whole line slides up or down without ever
+                changing its steepness, while the{" "}
+                <InlineFormula
+                    id="formula-lines-insight-m"
+                    latex="\clr{gradient}{m}"
+                    colorMap={{ gradient: ACCENT }}
+                />{" "}
+                slider pivots it about that same{" "}
                 <InlineLinkedHighlight
                     varName="lineHighlight"
                     highlightId="intercept"
                     {...linkedHighlightPropsFromDefinition(getVariableInfo("lineHighlight"))}
+                    color={ACCENT_TWO}
+                    bgColor="rgba(142, 144, 245, 0.22)"
                 >
                     crossing point
                 </InlineLinkedHighlight>
@@ -556,7 +600,12 @@ export const straightLinesBlocks: ReactElement[] = [
         <Block id="lines-question-intercept" padding="md">
             <EditableParagraph id="para-lines-question-intercept" blockId="lines-question-intercept">
                 Follow that same cable car back to the y-axis and its equation turns out
-                to be y = 3x +{" "}
+                to be{" "}
+                <InlineFormula
+                    id="formula-lines-question-equation"
+                    latex="y = \clr{gradient}{3}x +"
+                    colorMap={{ gradient: ACCENT }}
+                />{" "}
                 <InlineFeedback
                     varName="answerLineIntercept"
                     correctValue="1"

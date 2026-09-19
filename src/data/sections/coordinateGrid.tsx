@@ -23,6 +23,8 @@ export const INK_QUIET = "#CBD5E1";     // axes, ticks
 export const GRID_LINE = "#EDF1F6";     // squared paper
 export const ACCENT = "#62D0AD";        // Soft Teal — the manipulable quantity
 export const ACCENT_TWO = "#8E90F5";    // Soft Indigo — its partner quantity
+export const GAP_ACROSS = "#F7B23B";    // Warm Amber — the horizontal gap (across / run)
+export const GAP_UP = "#F8A0CD";        // Soft Rose — the vertical gap (up / rise)
 export const SUCCESS = "#22c55e";
 
 export const EASE_150 = {

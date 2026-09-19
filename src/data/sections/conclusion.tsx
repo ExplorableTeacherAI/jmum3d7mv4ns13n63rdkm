@@ -7,7 +7,8 @@
 import { type ReactElement } from "react";
 import { StackLayout } from "@/components/layouts";
 import { Block } from "@/components/templates";
-import { EditableH2, EditableParagraph } from "@/components/atoms";
+import { EditableH2, EditableParagraph, InlineSpotColor } from "@/components/atoms";
+import { getVariableInfo, spotColorPropsFromDefinition } from "../variables";
 
 export const conclusionBlocks: ReactElement[] = [
     <StackLayout key="layout-conclusion-heading" maxWidth="xl">
@@ -21,8 +22,23 @@ export const conclusionBlocks: ReactElement[] = [
     <StackLayout key="layout-conclusion-thread" maxWidth="xl">
         <Block id="conclusion-thread" padding="sm">
             <EditableParagraph id="para-conclusion-thread" blockId="conclusion-thread">
-                Almost everything here grew out of one right-angled triangle. The gap
-                across and the gap up gave you the distance when you squared them, the
+                Almost everything here grew out of one right-angled triangle. The{" "}
+                <InlineSpotColor
+                    id="spot-conclusion-gap-across"
+                    varName="distanceDropX"
+                    {...spotColorPropsFromDefinition(getVariableInfo("distanceDropX"))}
+                >
+                    gap across
+                </InlineSpotColor>{" "}
+                and the{" "}
+                <InlineSpotColor
+                    id="spot-conclusion-gap-up"
+                    varName="distanceDropY"
+                    {...spotColorPropsFromDefinition(getVariableInfo("distanceDropY"))}
+                >
+                    gap up
+                </InlineSpotColor>{" "}
+                gave you the distance when you squared them, the
                 gradient when you divided them, and the circle when you insisted that the
                 distance never change.
             </EditableParagraph>

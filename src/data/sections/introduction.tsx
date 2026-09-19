@@ -7,7 +7,7 @@
 import { type ReactElement } from "react";
 import { StackLayout } from "@/components/layouts";
 import { Block } from "@/components/templates";
-import { EditableH1, EditableParagraph } from "@/components/atoms";
+import { EditableH1, EditableParagraph, InlineTooltip } from "@/components/atoms";
 
 export const introductionBlocks: ReactElement[] = [
     <StackLayout key="layout-intro-title" maxWidth="xl">
@@ -24,7 +24,14 @@ export const introductionBlocks: ReactElement[] = [
                 Open any food delivery app and you can watch a little scooter icon crawl
                 across a map. The app knows exactly how far it still has to travel, where
                 the halfway point is, and which streets sit inside its ten-minute circle.
-                It works all of that out from nothing but pairs of numbers.
+                It works all of that out from nothing but{" "}
+                <InlineTooltip
+                    id="tooltip-intro-coordinates"
+                    tooltip="Coordinates: a pair (x, y) that says how far across and how far up a point sits on the grid."
+                >
+                    pairs of numbers
+                </InlineTooltip>
+                .
             </EditableParagraph>
         </Block>
     </StackLayout>,
